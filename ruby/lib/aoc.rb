@@ -5,6 +5,10 @@ module AOC
     File.read(File.expand_path("../../input/day#{day}.txt", __dir__))
   end
 
+  def self.get_example_input(day)
+    File.read(File.expand_path("../../input/day#{day}example.txt", __dir__))
+  end
+
   def self.digit_matrix(input)
     Matrix.rows(input.split("\n").map { _1.chars.map(&:to_i) })
   end
