@@ -120,6 +120,10 @@ module P
     regexp(/\w+/)
   end
 
+  def self.whitespace
+    regexp(/\s+/).map {nil}
+  end
+
   # Sequence of parsers in order. Drops raw string results
   def self.seq(*parsers)
     Parser.new do |i|
