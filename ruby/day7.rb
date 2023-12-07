@@ -1,15 +1,15 @@
 require_relative './lib/aoc'
 
 Hand = Struct.new(:cards, :bid) do
-  PT1_CARD_ORDER = '23456789TJQKA'
-  PT2_CARD_ORDER = 'J23456789TQKA'
+  PT1_CARD_ORDER = '23456789TJQKA'.chars.each_with_index.to_h
+  PT2_CARD_ORDER = 'J23456789TQKA'.chars.each_with_index.to_h
 
   def pt1_sort_key
-    [type_for_tally(cards.tally), cards.map {PT1_CARD_ORDER.index(_1)}]
+    [type_for_tally(cards.tally), cards.map(&PT1_CARD_ORDER)]
   end
 
   def pt2_sort_key
-    [type_for_tally(tally_with_wildcard_joker), cards.map {PT2_CARD_ORDER.index(_1)}]
+    [type_for_tally(tally_with_wildcard_joker), cards.map(&PT2_CARD_ORDER)]
   end
 
   private def tally_with_wildcard_joker
