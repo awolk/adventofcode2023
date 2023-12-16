@@ -1,46 +1,36 @@
 require_relative './lib/aoc'
+require_relative './lib/grid'
 
 input = AOC.get_input(3)
-rows = input.split("\n")
+grid = Grid.chars(input)
 
-def each_neighbor(rows, r, c, &blk)
-  [r-1, r, r+1].each do |ir|
-    [c-1, c, c+1].each do |ic|
-      next if ir == r && ic == c
-      val = rows[ir]&.[](ic)
-      next if val.nil?
-      blk.call(val, ir, ic)
-    end
-  end
-end
-
-def adjacent_symbol?(rows, r, c)
-  to_enum(:each_neighbor, rows, r, c).any? do |val, ir, ic|
+def adjacent_symbol?(grid, r, c)
+  grid.neighbors_with_positions(r, c).any? do |val, _pos|
     val != '.' && !val.match?(/\d/)
   end
 end
 
-def adjacent_gears(rows, r, c)
-  to_enum(:each_neighbor, rows, r, c).filter_map do |val, ir, ic|
-    [ir, ic] if val == '*'
+def adjacent_gears(grid, r, c)
+  grid.neighbors_with_positions(r, c).filter_map do |val, pos|
+    pos if val == '*'
   end
 end
 
 pt1 = 0
 gears = {} # map of position to adjacent numbers
 
-rows.each_with_index do |row, r|
+grid.row_strings.each_with_index do |row, r|
   row.scan(/\d+/) do |match|
     col_s, col_e = $~.offset(0)
     col_range = col_s ... col_e
     val = match.to_i
 
-    if col_range.any? {|c| adjacent_symbol?(rows, r, c)}
+    if col_range.any? {|c| adjacent_symbol?(grid, r, c)}
       pt1 += val
     end
 
     gear_positions = col_range.flat_map do |c|
-      adjacent_gears(rows, r, c)
+      adjacent_gears(grid, r, c)
     end.uniq
     gear_positions.each do |gear|
       (gears[gear] ||= []) << val

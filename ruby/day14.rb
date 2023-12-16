@@ -1,16 +1,16 @@
 require_relative './lib/aoc'
+require_relative './lib/grid'
 
 def slide!(grid, dr, dc)
   loop do
     changed = false
-    grid.each_with_index do |chr, r, c|
+    grid.all_indexes('O').each do |r, c|
       ar, ac = r + dr, c + dc
-      next if !(0...grid.row_count).include?(ar) || !(0...grid.column_count).include?(ac)
-      if chr == 'O' && grid[ar, ac] == '.'
-        changed = true
-        grid[ar, ac] = 'O'
-        grid[r, c] = '.'
-      end
+      next unless grid.valid_pos?(ar, ac) && grid[ar, ac] == '.'
+
+      changed = true
+      grid[ar, ac] = 'O'
+      grid[r, c] = '.'
     end
     break if !changed
   end
@@ -24,12 +24,8 @@ def cycle!(grid)
 end
 
 def total_load(grid)
-  grid.each_with_index.sum do |chr, r, _c|
-    if chr == 'O'
-      grid.row_count - r
-    else
-      0
-    end
+  grid.all_indexes('O').sum do |r, _c|
+    grid.row_count - r
   end
 end
 
@@ -49,7 +45,7 @@ def find_repeating_cycle(&blk)
 end
 
 input = AOC.get_input(14)
-grid = AOC.char_matrix(input)
+grid = Grid.chars(input)
 
 pt1_grid = grid.clone
 slide!(pt1_grid, -1, 0)

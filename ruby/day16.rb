@@ -1,4 +1,5 @@
 require_relative './lib/aoc'
+require_relative './lib/grid'
 
 Beam = Struct.new(:pos, :dir) do
   def r = pos[0]
@@ -7,10 +8,6 @@ Beam = Struct.new(:pos, :dir) do
   def dc = dir[1]
 
   def next = Beam.new([r + dr, c + dc], dir)
-end
-
-def valid_pos?(grid, (r, c))
-  r.between?(0, grid.row_count - 1) && c.between?(0, grid.column_count - 1)
 end
 
 def count_energized(grid, initial_beam)
@@ -25,10 +22,10 @@ def count_energized(grid, initial_beam)
       handled << beam
 
       next_step = beam.next
-      next unless valid_pos?(grid, next_step.pos)
+      next unless grid.valid_pos?(next_step.pos)
       energized << next_step.pos
 
-      at = grid[*next_step.pos]
+      at = grid[next_step.pos]
       case at
       when '.'
         new_beams << next_step
@@ -49,7 +46,7 @@ def count_energized(grid, initial_beam)
       when '/'
         new_beams << Beam.new(next_step.pos, [-next_step.dc, -next_step.dr])
       when '\\'
-        new_beams << Beam.new(next_step.pos, [next_step.dc, next_step.dr]])
+        new_beams << Beam.new(next_step.pos, [next_step.dc, next_step.dr])
       end
     end
     beams = new_beams
@@ -59,7 +56,7 @@ def count_energized(grid, initial_beam)
 end
 
 input = AOC.get_input(16)
-grid = AOC.char_matrix(input)
+grid = Grid.chars(input)
 
 pt1 = count_energized(grid, Beam.new([0, -1], [0, 1]))
 puts "Part 1: #{pt1}"

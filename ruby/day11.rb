@@ -1,16 +1,15 @@
 require_relative './lib/aoc'
+require_relative './lib/grid'
 
 class Image
   def initialize(grid)
-    @empty_rows = (0 ... grid.row_count).select do |row_index|
-      grid[row_index, 0..].all?('.')
+    @empty_rows = grid.rows.each_with_index.filter_map do |row, row_index|
+      row_index if row.all?('.')
     end.to_set
-    @empty_cols = (0 ... grid.column_count).select do |column_index|
-      (0...grid.row_count).all? {|r| grid[r, column_index] == '.'}
+    @empty_cols = grid.columns.each_with_index.filter_map do |col, col_index|
+      col_index if col.all?('.')
     end.to_set
-    @galaxies = grid.each_with_index.filter_map do |val, r, c|
-      [r, c] if val == '#'
-    end
+    @galaxies = grid.all_indexes('#')
   end
 
   def sum_path_lengths(expansion)
@@ -26,7 +25,7 @@ class Image
 end
 
 input = AOC.get_input(11)
-image = Image.new(AOC.char_matrix(input))
+image = Image.new(Grid.chars(input))
 
 pt1 = image.sum_path_lengths(2)
 puts "Part 1: #{pt1}"

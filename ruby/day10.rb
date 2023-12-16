@@ -1,8 +1,5 @@
 require_relative './lib/aoc'
-
-def valid_pos?(grid, (r, c))
-  r.between?(0, grid.row_count - 1) && c.between?(0, grid.column_count - 1)
-end
+require_relative './lib/grid'
 
 # returns a map of position to distance, calling blk to get neighbors
 def bfs(grid, start, &blk)
@@ -16,7 +13,7 @@ def bfs(grid, start, &blk)
 
     to_visit.each do |pos|
       r, c = pos
-      next if !valid_pos?(grid, pos)
+      next if !grid.valid_pos?(pos)
       next if distances.key?(pos) # skip if we've already visited
 
       distances[pos] = dist
@@ -28,12 +25,7 @@ def bfs(grid, start, &blk)
   distances
 end
 
-def all_neighbors((r, c))
-  Set[[r+1, c], [r-1, c], [r, c+1], [r, c-1]]
-end
-
-def connected(grid, pos)
-  r, c = pos
+def connected(grid, (r, c))
   case grid[r, c]
   when '|'
     [[r+1, c], [r-1, c]]
@@ -49,8 +41,8 @@ def connected(grid, pos)
     [[r, c+1], [r+1, c]]
   when 'S'
     # find pipes that point at start
-    all_neighbors(pos).select do |neighbor|
-      connected(grid, neighbor).include?(pos)
+    grid.neighbor_positions(r, c, diagonals: false).select do |neighbor|
+      connected(grid, neighbor).include?([r, c])
     end
   else
     []
@@ -58,7 +50,7 @@ def connected(grid, pos)
 end
 
 input = AOC.get_input(10)
-grid = AOC.char_matrix(input)
+grid = Grid.chars(input)
 starting_pos = grid.index('S')
 
 distances = bfs(grid, starting_pos) {|pos| connected(grid, pos)}
@@ -70,9 +62,10 @@ def enclosed_tiles(grid, start_pos, in_loop)
 
   # use bfs to do a flood fill
   bfs(grid, start_pos) do |pos|
-    (all_neighbors(pos).reject {in_loop.include?(_1)}).tap do |neighbors|
-      raise "escaped" if neighbors.any? {|n| !valid_pos?(grid, n)}
-    end
+    neighbors = grid.neighbor_positions(pos, diagonals: false)
+    neighbors.reject! {in_loop.include?(_1)}
+    raise "escaped" if neighbors.any? {|n| grid.at_edge?(n)}
+    neighbors
   end.keys.to_set
 end
 
