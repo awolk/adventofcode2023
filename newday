@@ -1,0 +1,18 @@
+#!/bin/bash
+cd `dirname $0`
+touch input/day${1}.txt
+touch input/day${1}example.txt
+cat <<EOF > ruby/day${1}.rb
+require_relative './lib/aoc'
+require_relative './lib/grid'
+require_relative './lib/parser'
+
+# input = AOC.get_input(${1})
+input = AOC.get_example_input(${1})
+
+pt1 = 0
+puts "Part 1: #{pt1}"
+
+pt2 = 0
+puts "Part 2: #{pt2}"
+EOF
