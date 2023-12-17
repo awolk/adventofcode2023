@@ -1,12 +1,6 @@
 require_relative './lib/aoc'
 require_relative './lib/grid'
-require_relative './lib/parser'
-
-def diff(pos1, pos2)
-  r1, c1 = pos1
-  r2, c2 = pos2
-  [r1 - r2, c1 - c2]
-end
+require_relative './lib/heap'
 
 class Graph
   def initialize(grid, min_steps_after_turn, max_steps_in_same_dir)
@@ -46,29 +40,27 @@ class Graph
   end
 end
 
-# input = AOC.get_input(17)
-input = AOC.get_example_input(17)
+input = AOC.get_input(17)
 grid = Grid.digits(input)
 
 def a_star(start, graph)
-  open_set = Set[start]
-  gscore = {start => 0}
-  fscore = {start => graph.heuristic(start)}
+  known_cost_to = {start => 0}
+  potential_total_cost = {start => graph.heuristic(start)}
+  to_visit = MinHeap.new(&potential_total_cost)
+  to_visit.add(start)
 
-  while !open_set.empty?
-    current = open_set.min_by(&fscore)
+  while !to_visit.empty?
+    current = to_visit.pop
     if graph.goal?(current)
-      return gscore[current]
+      return known_cost_to[current]
     end
 
-    open_set.delete(current)
-
     graph.neighbors_with_cost(current).each do |neighbor, cost|
-      tentative_gscore = gscore[current] + cost
-      if gscore[neighbor].nil? || tentative_gscore < gscore[neighbor]
-        gscore[neighbor] = tentative_gscore
-        fscore[neighbor] = tentative_gscore + graph.heuristic(neighbor)
-        open_set.add(neighbor)
+      tentative_cost_to = known_cost_to[current] + cost
+      if known_cost_to[neighbor].nil? || tentative_cost_to < known_cost_to[neighbor]
+        known_cost_to[neighbor] = tentative_cost_to
+        potential_total_cost[neighbor] = tentative_cost_to + graph.heuristic(neighbor)
+        to_visit.add(neighbor)
       end
     end
   end
