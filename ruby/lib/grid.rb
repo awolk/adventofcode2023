@@ -97,7 +97,7 @@ class Grid
   end
 
   def neighbors_with_positions(r, c=nil, diagonals: true)
-    neighbor_positions(r, c, diagonals).map do |pos|
+    neighbor_positions(r, c, diagonals: diagonals).map do |pos|
       [self[pos], pos]
     end
   end
