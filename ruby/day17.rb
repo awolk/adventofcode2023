@@ -2,52 +2,33 @@ require_relative './lib/aoc'
 require_relative './lib/grid'
 require_relative './lib/parser'
 
-def dist((r1, c1), (r2, c2))
-  (r1 - r2).abs + (c1 - c2).abs
-end
-
 def diff(pos1, pos2)
-  return nil if pos1.nil? || pos2.nil?
   r1, c1 = pos1
   r2, c2 = pos2
   [r1 - r2, c1 - c2]
 end
 
-input = AOC.get_input(17)
-# input = AOC.get_example_input(17)
-grid = Grid.digits(input)
-
-def reconstruct_path(came_from, current)
-  path = [current]
-  while came_from.has_key?(current)
-    current = came_from[current]
-    path.unshift(current)
+class Graph
+  def initialize(grid)
+    @grid = grid
+    @goal = [grid.row_count - 1, grid.column_count - 1]
   end
-  return path
+
+  def goal?(state)
+    state[0] == @goal
+  end
+
+  def heuristic(state)
+    (r, c), = state
+    @grid.row_count - r + @grid.column_count - c - 2
+  end
 end
 
-def a_star(grid)
-  start = [0, 0]
-  goal = [grid.row_count-1, grid.column_count-1]
-
-  first_state = [start, 0, [0, 0]]
-  open_set = Set[first_state]
-  came_from = {}
-  # states in the graph record [position, last n steps in same dir, dir]
-  gscore = {first_state => 0}
-  fscore = {first_state => dist(start, goal)}
-
-  while !open_set.empty?
-    current = open_set.min_by(&fscore)
-    if current[0] == goal
-      # return reconstruct_path(came_from, current)
-      return gscore[current]
-    end
-
-    open_set.delete(current)
-    pos, last_n_steps, last_dir = current
-    grid.neighbors_with_positions(pos, diagonals: false).each do |cost, neighbor|
-      dir = diff(neighbor, pos)
+class Part1Graph < Graph
+  def neighbors_with_cost(state)
+    pos, last_n_steps, last_dir = state
+    @grid.neighbors_with_positions(pos, diagonals: false).filter_map do |cost, neighbor_pos|
+      dir = diff(neighbor_pos, pos)
       next if dir[0] == -last_dir[0] && dir[1] == -last_dir[1] # no turning backwards
       if dir == last_dir
         next if last_n_steps == 3
@@ -55,14 +36,56 @@ def a_star(grid)
       else
         steps = 1
       end
-      neighbor_entry = [neighbor, steps, dir]
+      [[neighbor_pos, steps, dir], cost]
+    end
+  end
+end
 
-      tentative_g_score = gscore[current] + cost
-      if gscore[neighbor_entry].nil? || tentative_g_score < gscore[neighbor_entry]
-        came_from[neighbor_entry] = current
-        gscore[neighbor_entry] = tentative_g_score
-        fscore[neighbor_entry] = tentative_g_score + dist(neighbor, goal)
-        open_set.add(neighbor_entry)
+class Part2Graph < Graph
+  def neighbors_with_cost(state)
+    pos, last_n_steps, last_dir = state
+    dirs = [[0, 1], [0, -1], [1, 0], [-1, 0]]
+    dirs.delete([-last_dir[0], -last_dir[1]])
+    dirs.delete(last_dir) if last_n_steps == 10
+    dirs.filter_map do |dir|
+      if dir != last_dir
+        # we turned, so go minimum 4 steps
+        new_pos = [pos[0] + 4*dir[0], pos[1] + 4*dir[1]]
+        next nil if !@grid.valid_pos?(new_pos)
+        cost = (1..4).sum {|n| @grid[pos[0] + n*dir[0], pos[1] + n*dir[1]]}
+        [[new_pos, 4, dir], cost]
+      else
+        new_pos = [pos[0] + dir[0], pos[1] + dir[1]]
+        next nil if !@grid.valid_pos?(new_pos)
+        [[new_pos, last_n_steps + 1, dir], @grid[new_pos]]
+      end
+    end
+  end
+end
+
+# input = AOC.get_input(17)
+input = AOC.get_example_input(17)
+grid = Grid.digits(input)
+
+def a_star(start, graph)
+  open_set = Set[start]
+  gscore = {start => 0}
+  fscore = {start => graph.heuristic(start)}
+
+  while !open_set.empty?
+    current = open_set.min_by(&fscore)
+    if graph.goal?(current)
+      return gscore[current]
+    end
+
+    open_set.delete(current)
+
+    graph.neighbors_with_cost(current).each do |neighbor, cost|
+      tentative_gscore = gscore[current] + cost
+      if gscore[neighbor].nil? || tentative_gscore < gscore[neighbor]
+        gscore[neighbor] = tentative_gscore
+        fscore[neighbor] = tentative_gscore + graph.heuristic(neighbor)
+        open_set.add(neighbor)
       end
     end
   end
@@ -70,8 +93,8 @@ def a_star(grid)
   raise "could not reach goal"
 end
 
-pt1 = a_star(grid)
+pt1 = a_star([[0, 0], 0, [0, 0]], Part1Graph.new(grid))
 puts "Part 1: #{pt1}"
 
-pt2 = 0
+pt2 = a_star([[0, 0], 0, [0, 0]], Part2Graph.new(grid))
 puts "Part 2: #{pt2}"
