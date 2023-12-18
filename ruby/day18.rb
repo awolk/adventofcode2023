@@ -1,12 +1,26 @@
 require_relative './lib/aoc'
-require_relative './lib/grid'
 require_relative './lib/parser'
 
-input = AOC.get_input(18)
-# input = AOC.get_example_input(18)
+def area(steps)
+  vertices = steps.reduce([Vector[0, 0]]) do |vertices, step|
+    vertices << vertices.last + step
+  end
 
-parser = P.seq(P.word, ' ', P.int, ' (#', P.regexp(/[0-9a-f]+/), ')').each_line
-steps = parser.parse_all(input)
+  # Shoelace formula calculates the area enclosed by points within the center
+  # of a given square (A').
+  # Pick's theorem gives us that A' = i + b/2 - 1 for that offset polygon, where
+  # b is the points on the perimeter and i is the number of internal squares.
+  # We therefore have i = A' - b/2 + 1
+  # Area of the entire thing is the internal squares and the perimeter squares.
+  # A = i + b = A' + b/2 + 1
+  b = steps.sum(&:magnitude)
+
+  a_prime = vertices.each_cons(2).sum do |a, b|
+    a[0] * b[1] - b[0] * a[1]
+  end.abs / 2
+  
+  (a_prime + b / 2 + 1).to_i
+end
 
 dirs = {
   'R' => Vector[1, 0],
@@ -15,50 +29,16 @@ dirs = {
   'U' => Vector[0, 1],
 }
 
-pos = Vector[0, 0]
-edges = Set[pos]
-steps.each do |dir, count, _color|
-  count.times do
-    pos += dirs[dir]
-    edges << pos
-  end
+input = AOC.get_input(18)
+pt1_parser = P.seq(P.word.map(&dirs), ' ', P.int).map {|dir, len| dir * len}
+pt2_parser = P.regexp(/[0-9a-f]+/).map do |color|
+  color[...5].to_i(16) * dirs.values[color[5].to_i]
 end
+parser = P.seq(pt1_parser, ' (#', pt2_parser, ')').each_line
+steps = parser.parse_all(input)
 
-x_range = edges.map {_1[0]}.minmax
-y_range = edges.map {_1[1]}.minmax
-
-# flood fill from a non-edge corner
-start = [
-  Vector[x_range[0], y_range[0]],
-  Vector[x_range[0], y_range[1]],
-  Vector[x_range[1], y_range[0]],
-  Vector[x_range[1], y_range[1]]
-].find {|pos| !edges.include?(pos)}
-
-# extend the edges to allow the flood fill to catch everything
-x_range[0] -= 1
-x_range[1] += 1
-y_range[0] -= 1
-y_range[1] += 1
-
-filled = Set[]
-to_visit = Set[start]
-while !to_visit.empty?
-  pos = to_visit.first
-  to_visit.delete(pos)
-
-  next if !pos[0].between?(*x_range) || !pos[1].between?(*y_range)
-  next if filled.include?(pos)
-  next if edges.include?(pos)
-  filled << pos
-  dirs.values.each do |dir|
-    to_visit << pos + dir
-  end
-end
-
-pt1 = (x_range[1] - x_range[0] + 1) * (y_range[1] - y_range[0] + 1) - filled.size
+pt1 = area(steps.map(&:first))
 puts "Part 1: #{pt1}"
 
-
-pt2 = 0
+pt2 = area(steps.map(&:last))
 puts "Part 2: #{pt2}"
