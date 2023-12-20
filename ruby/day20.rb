@@ -11,19 +11,18 @@ input = AOC.get_input(20)
 # input = AOC.get_example_input(20)
 modules = parser.parse_all(input)
 
-mod_inputs = modules.flat_map do |(type, name), destinations|
-  destinations.map {[_1, name]}
-end.group_by(&:first).transform_values {_1.map(&:last)}
+mods_by_name = modules.map do |(type, name), destinations|
+  [name, [type, destinations]]
+end.to_h
 
 flip_flop_states = modules.filter_map do |(type, name), destinations|
   [name, false] if type == '%'
 end.to_h
 conjunction_states = modules.filter_map do |(type, name), destinations|
-  [name, mod_inputs[name].map {[_1, false]}.to_h] if type == '&'
-end.to_h
-
-mods_by_name = modules.map do |(type, name), destinations|
-  [name, [type, destinations]]
+  if type == '&'
+    inputs = modules.filter_map {|(_, n), d| n if d.include?(name)}
+    [name, inputs.map {[_1, false]}.to_h]
+  end
 end.to_h
 
 pulses = {false => 0, true => 0}
