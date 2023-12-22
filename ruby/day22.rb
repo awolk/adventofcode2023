@@ -56,40 +56,40 @@ end
 
 # Categorize bricks as safe or unsafe
 directly_above = above.map do |i, all_above|
-  [i, all_above.filter {|ai| bricks[ai].low_z == bricks[i].high_z + 1}]
+  [i, all_above.filter {|ai| bricks[ai].low_z == bricks[i].high_z + 1}.to_set]
 end.to_h
 directly_below = below.map do |i, all_below|
-  [i, all_below.filter {|bi| bricks[bi].high_z + 1 == bricks[i].low_z}]
+  [i, all_below.filter {|bi| bricks[bi].high_z + 1 == bricks[i].low_z}.to_set]
 end.to_h
 
 unsafe, safe = (0...bricks.length).partition do |i|
-  potentially_supports = directly_above[i] || []
+  potentially_supports = directly_above.fetch(i, [])
   potentially_supports.any? do |potentially_supporting|
-    (directly_below[potentially_supporting] || []).length == 1
+    directly_below[potentially_supporting]&.length == 1
   end
 end
 
-pt1 = safe.count
+pt1 = safe.length
 puts "Part 1: #{pt1}"
 
 pt2 = unsafe.sum do |ind_to_disintegrate|
-  would_fall = Set[ind_to_disintegrate]
-  to_assess = Set[ind_to_disintegrate]
-  new_to_assess = Set[]
+  # Find all of the affected bricks
+  all_would_fall = Set[ind_to_disintegrate]
+  falling = Set[ind_to_disintegrate]
+  will_fall = Set[]
   loop do
-    to_assess.each do |ind|
+    falling.each do |ind|
       # look for anything above that would've been supported but now isn't
-      new_to_assess += (above[ind] || []).select {bricks[_1].low_z == bricks[ind].high_z + 1}.select do |potentially_falling|
-        possible_supporters = below[potentially_falling].to_set - would_fall
-        possible_supporters.none? {bricks[_1].high_z + 1 == bricks[potentially_falling].low_z}
+      will_fall += directly_above.fetch(ind, []).select do |potentially_falling|
+        possible_supporters = directly_below.fetch(potentially_falling, Set[]) - all_would_fall
+        possible_supporters.empty?
       end
     end
-    break if new_to_assess.empty?
-    would_fall += new_to_assess
-    to_assess = new_to_assess
-    new_to_assess = Set[]
+    break if will_fall.empty?
+    all_would_fall += will_fall
+    falling = will_fall
+    will_fall = Set[]
   end
-  would_fall.size - 1
+  all_would_fall.size - 1
 end
 puts "Part 2: #{pt2}"
-# 41610
