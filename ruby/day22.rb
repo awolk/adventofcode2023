@@ -8,8 +8,8 @@ end
 
 class Brick
   def initialize(a, b)
-    @a = Vector[*(0..2).map {|dim| [a[dim], b[dim]].min}]
-    @b = Vector[*(0..2).map {|dim| [a[dim], b[dim]].max}]
+    @a = Vector[*a.zip(b).map(&:min)]
+    @b = Vector[*a.zip(b).map(&:max)]
   end
   attr_reader :a, :b
 
@@ -20,10 +20,8 @@ class Brick
     (0..1).all? {|dim| range_intersect?(a[dim] .. b[dim], other.a[dim] .. other.b[dim])}
   end
 
-  def at_ground? = low_z == 1
-
   def fall_to!(z)
-    dist = @a[2] - z
+    dist = a[2] - z
     @a -= Vector[0, 0, dist]
     @b -= Vector[0, 0, dist]
   end
@@ -34,6 +32,7 @@ bricks = input.split("\n").map do |line|
   Brick.new(*line.split('~').map {|part| Vector[*part.split(',').map(&:to_i)]})
 end
 
+# Find bricks that are above/below one another
 below = {}
 above = {}
 (0...bricks.length).to_a.combination(2).each do |b1, b2|
@@ -44,47 +43,31 @@ above = {}
   (below[b2] ||= []) << b1
 end
 
-puts "found stacks"
-
-fixed = Set[]
-loop do
-  any_moved = false
-  bricks.each_with_index do |brick, i|
-    next if fixed.include?(i)
-    next if brick.at_ground?
-    if below.key?(i)
-      # move it until its directly above the brick below it
-      fall_to = below[i].map {|bi| bricks[bi].high_z}.max + 1
-      if fall_to != brick.low_z
-        brick.fall_to!(fall_to)
-        any_moved = true
-      end
-    else
-      # nothing below, move it straight to the ground!
-      brick.fall_to!(1)
-      any_moved = true
-      fixed << i
-    end
-  end
-  break unless any_moved
+# Simulate bricks falling
+some_below, none_below = (0...bricks.length).partition(&below)
+none_below.each do |i|
+  bricks[i].fall_to!(1)
+end
+some_below.sort_by! {bricks[_1].low_z}
+some_below.each do |i|
+  fall_to = below[i].map {|bi| bricks[bi].high_z}.max + 1
+  bricks[i].fall_to!(fall_to)
 end
 
-puts "done simulating"
+# Categorize bricks as safe or unsafe
+directly_above = above.map do |i, all_above|
+  [i, all_above.filter {|ai| bricks[ai].low_z == bricks[i].high_z + 1}]
+end.to_h
+directly_below = below.map do |i, all_below|
+  [i, all_below.filter {|bi| bricks[bi].high_z + 1 == bricks[i].low_z}]
+end.to_h
 
-safe = []
-unsafe = []
-bricks.each_with_index do |brick, i|
-  potentially_supports = (above[i] || []).filter {bricks[_1].low_z == brick.high_z + 1}
-  others_will_fall = potentially_supports.any? do |potentially_supporting|
-    below_ps = below[potentially_supporting]
-    other_below = below_ps.reject {_1 == i}
-    highest_of_other_below = other_below.map {bricks[_1].high_z}.max
-    highest_of_other_below != brick.high_z
+unsafe, safe = (0...bricks.length).partition do |i|
+  potentially_supports = directly_above[i] || []
+  potentially_supports.any? do |potentially_supporting|
+    (directly_below[potentially_supporting] || []).length == 1
   end
-  (others_will_fall ? unsafe : safe) << i
 end
-
-puts "done categorizing"
 
 pt1 = safe.count
 puts "Part 1: #{pt1}"
