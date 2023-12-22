@@ -30,7 +30,6 @@ class Brick
 end
 
 input = AOC.get_input(22)
-# input = AOC.get_example_input(22)
 bricks = input.split("\n").map do |line|
   Brick.new(*line.split('~').map {|part| Vector[*part.split(',').map(&:to_i)]})
 end
@@ -72,7 +71,9 @@ end
 
 puts "done simulating"
 
-pt1 = bricks.each_with_index.count do |brick, i|
+safe = []
+unsafe = []
+bricks.each_with_index do |brick, i|
   potentially_supports = (above[i] || []).filter {bricks[_1].low_z == brick.high_z + 1}
   others_will_fall = potentially_supports.any? do |potentially_supporting|
     below_ps = below[potentially_supporting]
@@ -80,9 +81,32 @@ pt1 = bricks.each_with_index.count do |brick, i|
     highest_of_other_below = other_below.map {bricks[_1].high_z}.max
     highest_of_other_below != brick.high_z
   end
-  !others_will_fall
+  (others_will_fall ? unsafe : safe) << i
 end
+
+puts "done categorizing"
+
+pt1 = safe.count
 puts "Part 1: #{pt1}"
 
-pt2 = 0
+pt2 = unsafe.sum do |ind_to_disintegrate|
+  would_fall = Set[ind_to_disintegrate]
+  to_assess = Set[ind_to_disintegrate]
+  new_to_assess = Set[]
+  loop do
+    to_assess.each do |ind|
+      # look for anything above that would've been supported but now isn't
+      new_to_assess += (above[ind] || []).select {bricks[_1].low_z == bricks[ind].high_z + 1}.select do |potentially_falling|
+        possible_supporters = below[potentially_falling].to_set - would_fall
+        possible_supporters.none? {bricks[_1].high_z + 1 == bricks[potentially_falling].low_z}
+      end
+    end
+    break if new_to_assess.empty?
+    would_fall += new_to_assess
+    to_assess = new_to_assess
+    new_to_assess = Set[]
+  end
+  would_fall.size - 1
+end
 puts "Part 2: #{pt2}"
+# 41610
