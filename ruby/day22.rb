@@ -32,35 +32,22 @@ bricks = input.split("\n").map do |line|
   Brick.new(*line.split('~').map {|part| Vector[*part.split(',').map(&:to_i)]})
 end
 
-# Find bricks that are above/below one another
-below = {}
-above = {}
-(0...bricks.length).to_a.combination(2).each do |b1, b2|
-  next unless bricks[b1].overlapping_vertical?(bricks[b2])
-  b1, b2 = [b1, b2].sort_by {|ind| bricks[ind].low_z}
-  # b1 is below b2
-  (above[b1] ||= []) << b2
-  (below[b2] ||= []) << b1
-end
-
 # Simulate bricks falling
-some_below, none_below = (0...bricks.length).partition(&below)
-none_below.each do |i|
-  bricks[i].fall_to!(1)
-end
-some_below.sort_by! {bricks[_1].low_z}
-some_below.each do |i|
-  fall_to = below[i].map {|bi| bricks[bi].high_z}.max + 1
-  bricks[i].fall_to!(fall_to)
-end
+directly_above = {}
+directly_below = {}
 
-# Categorize bricks as safe or unsafe
-directly_above = above.map do |i, all_above|
-  [i, all_above.filter {|ai| bricks[ai].low_z == bricks[i].high_z + 1}.to_set]
-end.to_h
-directly_below = below.map do |i, all_below|
-  [i, all_below.filter {|bi| bricks[bi].high_z + 1 == bricks[i].low_z}.to_set]
-end.to_h
+bricks.sort_by!(&:high_z)
+bricks.each_with_index do |brick, ind|
+  below_with_ind = bricks[...ind].each_with_index.select {|other_brick, _| other_brick.overlapping_vertical?(brick)}
+  highest_below = below_with_ind.map {_1[0].high_z}.max
+  brick.fall_to!((highest_below || 0) + 1)
+
+  directly_below_ind = below_with_ind.select {|other_brick, ind| other_brick.high_z == highest_below}.map(&:last)
+  (directly_below[ind] ||= Set[]).merge(directly_below_ind)
+  directly_below_ind.each do |dbi|
+    (directly_above[dbi] ||= Set[]).add(ind)
+  end
+end
 
 unsafe, safe = (0...bricks.length).partition do |i|
   potentially_supports = directly_above.fetch(i, [])
