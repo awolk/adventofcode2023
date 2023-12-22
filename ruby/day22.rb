@@ -38,19 +38,20 @@ directly_below = {}
 
 bricks.sort_by!(&:high_z)
 bricks.each_with_index do |brick, ind|
-  below_with_ind = bricks[...ind].each_with_index.select {|other_brick, _| other_brick.overlapping_vertical?(brick)}
-  highest_below = below_with_ind.map {_1[0].high_z}.max
+  below = bricks[...ind].select {|other_brick| other_brick.overlapping_vertical?(brick)}
+  highest_below = below.map(&:high_z).max
   brick.fall_to!((highest_below || 0) + 1)
 
-  directly_below_ind = below_with_ind.select {|other_brick, ind| other_brick.high_z == highest_below}.map(&:last)
-  (directly_below[ind] ||= Set[]).merge(directly_below_ind)
-  directly_below_ind.each do |dbi|
-    (directly_above[dbi] ||= Set[]).add(ind)
+  directly_below_brick = below.select {|other_brick| other_brick.high_z == highest_below}
+  (directly_below[brick] ||= Set[]).merge(directly_below_brick)
+  directly_below_brick.each do |brick_below|
+    (directly_above[brick_below] ||= Set[]).add(brick)
   end
 end
 
-unsafe, safe = (0...bricks.length).partition do |i|
-  potentially_supports = directly_above.fetch(i, [])
+# Categorize bricks as safe or unsafe
+unsafe, safe = bricks.partition do |brick|
+  potentially_supports = directly_above.fetch(brick, [])
   potentially_supports.any? do |potentially_supporting|
     directly_below[potentially_supporting]&.length == 1
   end
@@ -59,15 +60,15 @@ end
 pt1 = safe.length
 puts "Part 1: #{pt1}"
 
-pt2 = unsafe.sum do |ind_to_disintegrate|
+pt2 = unsafe.sum do |to_disintegrate|
   # Find all of the affected bricks
-  all_would_fall = Set[ind_to_disintegrate]
-  falling = Set[ind_to_disintegrate]
+  all_would_fall = Set[to_disintegrate]
+  falling = Set[to_disintegrate]
   will_fall = Set[]
   loop do
-    falling.each do |ind|
+    falling.each do |brick|
       # look for anything above that would've been supported but now isn't
-      will_fall += directly_above.fetch(ind, []).select do |potentially_falling|
+      will_fall += directly_above.fetch(brick, []).select do |potentially_falling|
         possible_supporters = directly_below.fetch(potentially_falling, Set[]) - all_would_fall
         possible_supporters.empty?
       end
