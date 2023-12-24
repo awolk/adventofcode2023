@@ -69,6 +69,7 @@ module P
     # Parse self delimited by delimiter
     def delimited(delimiter)
       delimiter = P.str(delimiter) if delimiter.is_a?(String)
+      delimiter = P.regexp(delimiter) if delimiter.is_a?(Regexp)
       (self & (delimiter >> self).repeated)
         .map { |hd, tl| [hd] + tl } |
         P.nothing([])
@@ -133,6 +134,7 @@ module P
         if p.is_a?(String)
           _, rest = str(p).parse(rest)
         else
+          p = P.regexp(p) if p.is_a?(Regexp)
           res, rest = p.parse(rest)
           results << res
         end
