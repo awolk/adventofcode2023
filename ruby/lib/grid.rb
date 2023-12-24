@@ -102,6 +102,12 @@ class Grid
     end
   end
 
+  def neighbors(r, c=nil, diagonals: true)
+    neighbor_positions(r, c, diagonals: diagonals).map do |pos|
+      self[pos]
+    end
+  end
+
   def row_strings
     @rows.map(&:join)
   end
